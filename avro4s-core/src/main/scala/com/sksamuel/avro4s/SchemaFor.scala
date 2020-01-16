@@ -50,7 +50,6 @@ trait EnumSchemaFor {
   protected def addDefault[E](default: E)(schema: Schema): Schema = SchemaBuilder.
     enumeration(schema.getName).
     namespace(schema.getNamespace).
-    defaultSymbol(default.toString).
     symbols(schema.getEnumSymbols.asScala.toList:_*)
 }
 
@@ -222,22 +221,14 @@ object SchemaFor {
       val name = maybeName.getOrElse(nameExtractor.name)
       val namespace = maybeNamespace.getOrElse(nameExtractor.namespace)
 
-      val maybeEnumDefault = tag.runtimeClass.getDeclaredFields.collectFirst {
-        case field if field.getDeclaredAnnotations.map(_.annotationType()).contains(classOf[AvroJavaEnumDefault]) => field.getName
-      }
-
-      val schema = maybeEnumDefault.map { enumDefault =>
-        SchemaBuilder.enumeration(name).namespace(namespace).defaultSymbol(enumDefault).symbols(symbols: _*)
-      }.getOrElse {
-        SchemaBuilder.enumeration(name).namespace(namespace).symbols(symbols: _*)
-      }
+      val schema = SchemaBuilder.enumeration(name).namespace(namespace).symbols(symbols: _*)
 
       val props = tag.runtimeClass.getAnnotations.collect {
         case annotation: AvroJavaProp => annotation.key() -> annotation.value()
       }
 
       props.foreach { case (key, value) =>
-        schema.addProp(key, value)
+        (schema: JsonProperties).addProp(key, value)
       }
 
       schema
@@ -311,7 +302,7 @@ object SchemaFor {
       .getOrElse(schemaWithOrderedUnion)
 
     val field = encodedDefault match {
-      case null => new Schema.Field(name, schemaWithResolvedNamespace, doc)
+      case null => new Schema.Field(name, schemaWithResolvedNamespace, doc, default)
       case CustomUnionDefault(_, m) =>
         new Schema.Field(name, schemaWithResolvedNamespace, doc, m)
       case CustomEnumDefault(m) =>
@@ -399,7 +390,7 @@ object SchemaFor {
       val objs = tpe.typeSymbol.isClass && tpe.typeSymbol.asClass.knownDirectSubclasses.forall(_.isModuleClass)
 
 
-      val sortedSubtypes = ctx.subtypes.sortWith { (left: Subtype[Typeclass, T], right: Subtype[Typeclass, T]) => 
+      val sortedSubtypes = ctx.subtypes.sortWith { (left: Subtype[Typeclass, T], right: Subtype[Typeclass, T]) =>
         val leftPriority: Float = new AnnotationExtractors(left.annotations).sortPriority.getOrElse(0)
         val rightPriority: Float = new AnnotationExtractors(right.annotations).sortPriority.getOrElse(0)
         leftPriority > rightPriority
@@ -413,7 +404,7 @@ object SchemaFor {
         val nameExtractor = NameExtractor(ctx.typeName, ctx.annotations)
 
         CustomDefaults.sealedTraitEnumDefaultValue(ctx).map { default =>
-          SchemaBuilder.enumeration(nameExtractor.name).defaultSymbol(default).namespace(nameExtractor.namespace).symbols(symbols: _*)
+          SchemaBuilder.enumeration(nameExtractor.name).namespace(nameExtractor.namespace).symbols(symbols: _*)
         }.getOrElse(SchemaBuilder.enumeration(nameExtractor.name).namespace(nameExtractor.namespace).symbols(symbols: _*))
 
       } else {
@@ -469,14 +460,10 @@ object SchemaFor {
       val name = maybeName.getOrElse(nameExtractor.name)
       val namespace = maybeNamespace.getOrElse(nameExtractor.namespace)
 
-      val schema = enumDefault.map { default =>
-        SchemaBuilder.enumeration(name).namespace(namespace).defaultSymbol(default)symbols(syms: _*)
-      }.getOrElse {
-        SchemaBuilder.enumeration(name).namespace(namespace).symbols(syms: _*)
-      }
+      val schema = SchemaBuilder.enumeration(name).namespace(namespace).symbols(syms: _*)
 
       props.foreach { case (key, value) =>
-        schema.addProp(key, value)
+        (schema: JsonProperties).addProp(key, value)
       }
 
       schema
