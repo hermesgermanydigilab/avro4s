@@ -71,7 +71,7 @@ object Build extends AutoPlugin {
     if (isTravis) {
       version := s"3.1.0.$travisBuildNumber-SNAPSHOT"
     } else {
-      version := "3.0.5"
+      version := "3.0.6"
     },
     publishTo := {
       val nexus = "https://oss.sonatype.org/"
@@ -80,27 +80,6 @@ object Build extends AutoPlugin {
       } else {
         Some("releases" at s"${nexus}service/local/staging/deploy/maven2")
       }
-    },
-    pomExtra := {
-      <url>https://github.com/sksamuel/avro4s</url>
-        <licenses>
-          <license>
-            <name>MIT</name>
-            <url>https://opensource.org/licenses/MIT</url>
-            <distribution>repo</distribution>
-          </license>
-        </licenses>
-        <scm>
-          <url>git@github.com:sksamuel/avro4s.git</url>
-          <connection>scm:git@github.com:sksamuel/avro4s.git</connection>
-        </scm>
-        <developers>
-          <developer>
-            <id>sksamuel</id>
-            <name>sksamuel</name>
-            <url>http://github.com/sksamuel</url>
-          </developer>
-        </developers>
     }
   )
 }

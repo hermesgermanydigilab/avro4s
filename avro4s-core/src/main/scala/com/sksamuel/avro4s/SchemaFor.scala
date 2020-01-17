@@ -3,6 +3,7 @@ package com.sksamuel.avro4s
 import java.nio.ByteBuffer
 import java.sql.Timestamp
 import java.time.{Instant, LocalDate, LocalDateTime, LocalTime, OffsetDateTime}
+import java.util
 import java.util.UUID
 
 import magnolia.{CaseClass, Magnolia, SealedTrait, Subtype}
@@ -50,7 +51,9 @@ trait EnumSchemaFor {
   protected def addDefault[E](default: E)(schema: Schema): Schema = SchemaBuilder.
     enumeration(schema.getName).
     namespace(schema.getNamespace).
+    // FIXME defaultSymbol(default.toString).
     symbols(schema.getEnumSymbols.asScala.toList:_*)
+
 }
 
 object JavaEnumSchemaFor extends EnumSchemaFor {
@@ -221,7 +224,15 @@ object SchemaFor {
       val name = maybeName.getOrElse(nameExtractor.name)
       val namespace = maybeNamespace.getOrElse(nameExtractor.namespace)
 
-      val schema = SchemaBuilder.enumeration(name).namespace(namespace).symbols(symbols: _*)
+      val maybeEnumDefault = tag.runtimeClass.getDeclaredFields.collectFirst {
+        case field if field.getDeclaredAnnotations.map(_.annotationType()).contains(classOf[AvroJavaEnumDefault]) => field.getName
+      }
+
+      val schema: Schema = maybeEnumDefault.map { enumDefault =>
+        SchemaBuilder.enumeration(name).namespace(namespace).symbols(symbols: _*) // FIXME .defaultSymbol(enumDefault)
+      }.getOrElse {
+        SchemaBuilder.enumeration(name).namespace(namespace).symbols(symbols: _*)
+      }
 
       val props = tag.runtimeClass.getAnnotations.collect {
         case annotation: AvroJavaProp => annotation.key() -> annotation.value()
@@ -302,7 +313,7 @@ object SchemaFor {
       .getOrElse(schemaWithOrderedUnion)
 
     val field = encodedDefault match {
-      case null => new Schema.Field(name, schemaWithResolvedNamespace, doc, default)
+      case null => new Schema.Field(name, schemaWithResolvedNamespace, doc, (null: Object))
       case CustomUnionDefault(_, m) =>
         new Schema.Field(name, schemaWithResolvedNamespace, doc, m)
       case CustomEnumDefault(m) =>
@@ -404,7 +415,7 @@ object SchemaFor {
         val nameExtractor = NameExtractor(ctx.typeName, ctx.annotations)
 
         CustomDefaults.sealedTraitEnumDefaultValue(ctx).map { default =>
-          SchemaBuilder.enumeration(nameExtractor.name).namespace(nameExtractor.namespace).symbols(symbols: _*)
+          SchemaBuilder.enumeration(nameExtractor.name).namespace(nameExtractor.namespace).symbols(symbols: _*) // FIXME .defaultSymbol(default)
         }.getOrElse(SchemaBuilder.enumeration(nameExtractor.name).namespace(nameExtractor.namespace).symbols(symbols: _*))
 
       } else {
@@ -460,12 +471,15 @@ object SchemaFor {
       val name = maybeName.getOrElse(nameExtractor.name)
       val namespace = maybeNamespace.getOrElse(nameExtractor.namespace)
 
-      val schema = SchemaBuilder.enumeration(name).namespace(namespace).symbols(syms: _*)
+      val schema: Schema = enumDefault.map { default =>
+        SchemaBuilder.enumeration(name).namespace(namespace).symbols(syms: _*) // FIXME .defaultSymbol(default)
+      }.getOrElse {
+        SchemaBuilder.enumeration(name).namespace(namespace).symbols(syms: _*)
+      }
 
       props.foreach { case (key, value) =>
         (schema: JsonProperties).addProp(key, value)
       }
-
       schema
     }
 

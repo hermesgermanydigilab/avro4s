@@ -3,7 +3,7 @@ package com.sksamuel.avro4s.json
 import java.util
 
 import com.sksamuel.avro4s._
-import org.apache.avro.Schema
+import org.apache.avro.{JsonProperties, Schema}
 
 /**
   * Accepts a json string, and returns an Avro Schema that best matches the json string.
@@ -57,7 +57,7 @@ class JsonToAvroConverter(namespace: String,
 
   private def createStringSchema = {
     val schema = Schema.create(Schema.Type.STRING)
-    if (avroStringTypeIsString) schema.addProp("avro.java.string", "String")
+    if (avroStringTypeIsString) (schema: JsonProperties).addProp("avro.java.string", "String")
     schema
   }
 
