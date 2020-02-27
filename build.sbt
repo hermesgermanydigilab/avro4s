@@ -6,7 +6,7 @@ import sbt.{Credentials, Path}
 // We do need to prevent publishing for it, though:
 
 val artifactorySettings = Seq(
-  credentials += Credentials(Path.userHome / ".sbt" / ".credentials_hermes"),
+  credentials += Credentials(Path.userHome / ".sbt" / ".credentials"),
   publishTo := Some("Artifactory Realm" at "https://artifactory.hermesgermany.digital/artifactory/libs-release/")
 )
 
